@@ -7,18 +7,26 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
+        validate: {
+            notEmpty: true, 
+        },
     },
     email: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
         validate: {
-            isEmail: true,
+            isEmail: true, 
+            notEmpty: true, 
         },
     },
     password: {
         type: DataTypes.STRING,
         allowNull: false,
+        validate: {
+            notEmpty: true, 
+            len: [8, 100], // Required min and max length for pw
+        },
     },
 });
 
@@ -29,5 +37,10 @@ User.beforeCreate(async (user) => {
         user.password = await bcrypt.hash(user.password, salt);
     }
 });
+
+// Method to compare user's pw input with pw in db
+User.prototype.comparePassword = async function (password) {
+    return bcrypt.compare(password, this.password);
+};
 
 module.exports = User;

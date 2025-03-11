@@ -25,7 +25,7 @@ const User = sequelize.define('User', {
         allowNull: false,
         validate: {
             notEmpty: true, 
-            len: [8, 100], // Min and max length for pw
+            len: [8, 100], // Required min and max length for pw
         },
     },
 });

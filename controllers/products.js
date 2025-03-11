@@ -24,9 +24,7 @@ exports.getProductById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   try {
-    console.log("Request body:", req.body); // Log the raw input
     const { name, description, price, categoryId } = req.body;
-    console.log("Extracted price:", price, typeof price); // Log price and its type
     const category = await Category.findByPk(categoryId);
     if (!category)
       return res.status(400).json({ error: "Category does not exist" });
@@ -38,7 +36,6 @@ exports.createProduct = async (req, res) => {
     });
     res.status(201).json(newProduct);
   } catch (error) {
-    console.log("Error details:", error); // Log full error
     res.status(400).json({ error: error.message });
   }
 };

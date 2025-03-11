@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
 
 // CREATE: Add new user
 const createUser = async (req, res) => {
@@ -45,10 +46,18 @@ const updateUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
+
         user.username = username || user.username;
         user.email = email || user.email;
-        user.password = password || user.password; // Password not hashed, is already hashed in user model
+
+        if (password) {
+            // Hash password if it's being updated
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
+        }
+
         await user.save();
+
         res.status(200).json({
             message: 'User updated successfully',
             user: {

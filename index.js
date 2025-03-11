@@ -1,7 +1,7 @@
 const express = require('express');
-const sequelize = require('./db');
+const sequelize = require('./db'); // Importing the DB connection
 const dotenv = require('dotenv');
-dotenv.config(); // Loading .env file
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
     res.send('API is running...');
 });
 
-// db connection and server start
+// Database connection and server start
 sequelize.sync({ force: false }).then(() => {
     app.listen(port, () => {
         console.log(`Server running on http://localhost:${port}`);

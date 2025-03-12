@@ -1,7 +1,6 @@
 const express = require('express');
-const { createUser, getUserById, updateUser, deleteUser, getAllUsers } = require('../controllers/users');
-
 const router = express.Router();
+const { createUser, getUserById, updateUser, deleteUser, getAllUsers } = require('../controllers/users');
 
 // Endpoints for user CRUD operations
 router.post('/', createUser); // POST /api/users: Create new user

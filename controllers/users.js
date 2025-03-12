@@ -2,6 +2,26 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const userSchema = require('../schemas/userSchemas');
 
+
+// GET: Get user by ID
+const getUserById = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching user' });
+    }
+};
+
+
 // CREATE: Add new user
 const createUser = async (req, res) => {
     const { error } = userSchema.validate(req.body);  // Validation with Joi

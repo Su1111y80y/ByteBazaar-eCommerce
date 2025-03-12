@@ -21,6 +21,18 @@ const getUserById = async (req, res) => {
     }
 };
 
+// GET: Get all users
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.findAll(); // Ruft alle Benutzer ab
+        res.status(200).json(users); // Gibt die Liste der Benutzer zurück
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching users' });
+    }
+};
+
+
 
 // CREATE: Add new user
 const createUser = async (req, res) => {
@@ -109,6 +121,7 @@ const deleteUser = async (req, res) => {
 module.exports = {
     createUser,
     getUserById,
+    getAllUsers,
     getAllUsers,
     updateUser,
     deleteUser,

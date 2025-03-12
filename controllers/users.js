@@ -1,26 +1,9 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const userSchema = require('../schemas/userSchemas');
 
-// CREATE: Add new user
-const createUser = async (req, res) => {
-    try {
-        const { username, email, password } = req.body;
-        const newUser = await User.create({ username, email, password });
-        res.status(201).json({
-            message: 'User created successfully',
-            user: {
-                id: newUser.id,
-                username: newUser.username,
-                email: newUser.email,
-            },
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error creating user' });
-    }
-};
 
-// READ: Read user information
+// GET: Get user by ID
 const getUserById = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
@@ -38,20 +21,56 @@ const getUserById = async (req, res) => {
     }
 };
 
-// Get all users
+// GET: Get all users
 const getAllUsers = async (req, res) => {
     try {
-        const users = await User.findAll({
-            attributes: ['id', 'username', 'email', 'createdAt', 'updatedAt'] // Exclude password
-        });
-        res.status(200).json(users);
+        const users = await User.findAll(); // Ruft alle Benutzer ab
+        res.status(200).json(users); // Gibt die Liste der Benutzer zurück
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching users', error });
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching users' });
+    }
+};
+
+
+
+// CREATE: Add new user
+const createUser = async (req, res) => {
+    const { error } = userSchema.validate(req.body);  // Validation with Joi
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation failed',
+            details: error.details.map((detail) => detail.message),
+        });
+    }
+
+    try {
+        const { username, email, password } = req.body;
+        const newUser = await User.create({ username, email, password });
+        res.status(201).json({
+            message: 'User created successfully',
+            user: {
+                id: newUser.id,
+                username: newUser.username,
+                email: newUser.email,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error creating user' });
     }
 };
 
 // UPDATE: Update user information
 const updateUser = async (req, res) => {
+    const { error } = userSchema.validate(req.body);  // Validation with Joi
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation failed',
+            details: error.details.map((detail) => detail.message),
+        });
+    }
+
     try {
         const { username, email, password } = req.body;
         const user = await User.findByPk(req.params.id);

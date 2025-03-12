@@ -1,8 +1,17 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const userSchema = require('../schemas/userSchemas');
 
 // CREATE: Add new user
 const createUser = async (req, res) => {
+    const { error } = userSchema.validate(req.body);  // Validation with Joi
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation failed',
+            details: error.details.map((detail) => detail.message),
+        });
+    }
+
     try {
         const { username, email, password } = req.body;
         const newUser = await User.create({ username, email, password });
@@ -20,38 +29,16 @@ const createUser = async (req, res) => {
     }
 };
 
-// READ: Read user information
-const getUserById = async (req, res) => {
-    try {
-        const user = await User.findByPk(req.params.id);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.status(200).json({
-            id: user.id,
-            username: user.username,
-            email: user.email,
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching user' });
-    }
-};
-
-// Get all users
-const getAllUsers = async (req, res) => {
-    try {
-        const users = await User.findAll({
-            attributes: ['id', 'username', 'email', 'createdAt', 'updatedAt'] // Exclude password
-        });
-        res.status(200).json(users);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching users', error });
-    }
-};
-
 // UPDATE: Update user information
 const updateUser = async (req, res) => {
+    const { error } = userSchema.validate(req.body);  // Validation with Joi
+    if (error) {
+        return res.status(400).json({
+            error: 'Validation failed',
+            details: error.details.map((detail) => detail.message),
+        });
+    }
+
     try {
         const { username, email, password } = req.body;
         const user = await User.findByPk(req.params.id);

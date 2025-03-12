@@ -9,4 +9,5 @@ router.get('/:id', getUserById); // GET /api/users/:id: Get user by ID
 router.put('/:id', updateUser); // PUT /api/users/:id: Update a user
 router.delete('/:id', deleteUser); // DELETE /api/users/:id: Delete a user
 
+
 module.exports = router;

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/products");
-const validate = require("../middleware/validate"); // Assuming team has this
+const validate = require("../middleware/validate");
 const {
   productSchema,
   updateProductSchema,

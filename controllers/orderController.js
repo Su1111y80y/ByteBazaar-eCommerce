@@ -1,13 +1,16 @@
-// controllers/orderController.js
 const { Order, User, Product, OrderItem } = require("../models");
 const { createOrderSchema, updateOrderSchema } = require("../schemas/orderSchemas");
 const sequelize = require("../db");
 
-// Helper function to calculate total price
+/**
+ * Calculates the total price for an order based on products and quantities
+ * Fetches current prices from the database to ensure accuracy
+ */
 const calculateOrderTotal = async (products) => {
   let total = 0;
   
   for (const item of products) {
+    // Get current product price from database
     const product = await Product.findByPk(item.productId);
     
     if (!product) {
@@ -17,16 +20,18 @@ const calculateOrderTotal = async (products) => {
     total += product.price * item.quantity;
   }
   
+  // Format to 2 decimal places for currency
   return parseFloat(total.toFixed(2));
 };
 
-// Get all orders - MODIFIED to only show user's own orders
+/**
+ * Retrieves all orders belonging to the authenticated user
+ * Security: Filters orders by user ID to prevent data leakage
+ */
 const getAllOrders = async (req, res) => {
   try {
-    // Get the authenticated user's ID from the request
     const userId = req.user.id;
     
-    // Only fetch orders belonging to this user
     const orders = await Order.findAll({
       where: { userId },
       include: [
@@ -48,17 +53,20 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-// Get order by ID - MODIFIED to ensure users can only see their own orders
+/**
+ * Retrieves a specific order by ID
+ * Security: Verifies the order belongs to the authenticated user
+ */
 const getOrderById = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   
   try {
-    // Find the order and ensure it belongs to the authenticated user
+    // Find order with both matching ID and authenticated user's ID
     const order = await Order.findOne({
       where: {
         id,
-        userId // This ensures the order belongs to the authenticated user
+        userId 
       },
       include: [
         {
@@ -67,7 +75,7 @@ const getOrderById = async (req, res) => {
         },
         {
           model: User,
-          attributes: ["id", "username", "email"] // Exclude password
+          attributes: ["id", "username", "email"]
         }
       ]
     });
@@ -83,13 +91,16 @@ const getOrderById = async (req, res) => {
   }
 };
 
-// Create a new order
+/**
+ * Creates a new order with associated order items
+ * Uses transactions to ensure data consistency across multiple tables
+ */
 const createOrder = async (req, res) => {
-  // Start a transaction
+  // Start transaction to ensure atomic operations
   const transaction = await sequelize.transaction();
   
   try {
-    // Validate request body
+    // Validate request body against schema
     const { error, value } = createOrderSchema.validate(req.body);
     
     if (error) {
@@ -98,20 +109,20 @@ const createOrder = async (req, res) => {
     
     const { userId, products } = value;
     
-    // Security check: Ensure the authenticated user can only create orders for themselves
+    // Security: Prevent creating orders for other users
     if (userId !== req.user.id) {
       await transaction.rollback();
       return res.status(403).json({ error: "You can only create orders for yourself" });
     }
     
-    // Check if user exists
+    // Verify user exists
     const user = await User.findByPk(userId);
     if (!user) {
       await transaction.rollback();
       return res.status(404).json({ error: "User not found" });
     }
     
-    // Check if all products exist and calculate total
+    // Verify products and collect details
     let total = 0;
     const productDetails = [];
     
@@ -133,10 +144,9 @@ const createOrder = async (req, res) => {
       total += product.price * item.quantity;
     }
     
-    // Round total to 2 decimal places
     total = parseFloat(total.toFixed(2));
     
-    // Create order
+    // Create main order record
     const newOrder = await Order.create(
       {
         userId,
@@ -145,7 +155,7 @@ const createOrder = async (req, res) => {
       { transaction }
     );
     
-    // Create order items
+    // Create individual order items with current prices
     const orderItems = [];
     for (const { product, quantity } of productDetails) {
       const orderItem = await OrderItem.create(
@@ -153,7 +163,7 @@ const createOrder = async (req, res) => {
           orderId: newOrder.id,
           productId: product.id,
           quantity,
-          priceAtPurchase: product.price,
+          priceAtPurchase: product.price, // Store price at purchase time
         },
         { transaction }
       );
@@ -161,10 +171,10 @@ const createOrder = async (req, res) => {
       orderItems.push(orderItem);
     }
     
-    // Commit transaction
+    // Commit the transaction after all operations succeed
     await transaction.commit();
     
-    // Return order with items
+    // Return complete order with relationships
     const createdOrder = await Order.findByPk(newOrder.id, {
       include: [
         {
@@ -173,28 +183,31 @@ const createOrder = async (req, res) => {
         },
         {
           model: User,
-          attributes: ["id", "username", "email"] // Exclude password
+          attributes: ["id", "username", "email"]
         }
       ]
     });
     
     res.status(201).json(createdOrder);
   } catch (error) {
-    // Rollback transaction on error
+    // Rollback on any error to maintain database integrity
     await transaction.rollback();
     console.error("Error creating order:", error);
     res.status(500).json({ error: "Failed to create order" });
   }
 };
 
-// Update an order - MODIFIED to ensure users can only update their own orders
+/**
+ * Updates an existing order and its items
+ * Security: Users can only update their own orders
+ */
 const updateOrder = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   const transaction = await sequelize.transaction();
   
   try {
-    // Find the order and ensure it belongs to the authenticated user
+    // Find order and verify ownership
     const order = await Order.findOne({
       where: { 
         id,
@@ -207,7 +220,7 @@ const updateOrder = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
     
-    // Validate request body
+    // Validate update data
     const { error, value } = updateOrderSchema.validate(req.body);
     
     if (error) {
@@ -217,7 +230,7 @@ const updateOrder = async (req, res) => {
     
     const { products, status } = value;
     
-    // Security check: If userId is in the request body, ensure it matches the authenticated user
+    // Prevent order transfer between users
     if (value.userId && value.userId !== userId) {
       await transaction.rollback();
       return res.status(403).json({ error: "You cannot transfer an order to another user" });
@@ -225,13 +238,13 @@ const updateOrder = async (req, res) => {
     
     // Update products if provided
     if (products) {
-      // Delete existing order items
+      // Remove existing items first
       await OrderItem.destroy({ 
         where: { orderId: id },
         transaction
       });
       
-      // Check if all products exist and calculate new total
+      // Verify and process new products
       let total = 0;
       const productDetails = [];
       
@@ -253,7 +266,7 @@ const updateOrder = async (req, res) => {
         total += product.price * item.quantity;
       }
       
-      // Round total to 2 decimal places
+      // Update order total
       total = parseFloat(total.toFixed(2));
       order.total = total;
       
@@ -271,18 +284,18 @@ const updateOrder = async (req, res) => {
       }
     }
     
-    // Update status if provided
+    // Update order status if provided
     if (status) {
       order.status = status;
     }
     
-    // Save the order
+    // Save changes to order
     await order.save({ transaction });
     
-    // Commit transaction
+    // Commit all changes
     await transaction.commit();
     
-    // Return updated order with items
+    // Return updated order with relationships
     const updatedOrder = await Order.findByPk(id, {
       include: [
         {
@@ -291,28 +304,30 @@ const updateOrder = async (req, res) => {
         },
         {
           model: User,
-          attributes: ["id", "username", "email"] // Exclude password
+          attributes: ["id", "username", "email"]
         }
       ]
     });
     
     res.status(200).json(updatedOrder);
   } catch (error) {
-    // Rollback transaction on error
     await transaction.rollback();
     console.error(`Error updating order ${id}:`, error);
     res.status(500).json({ error: "Failed to update order" });
   }
 };
 
-// Delete an order - MODIFIED to ensure users can only delete their own orders
+/**
+ * Deletes an order and its items
+ * Security: Users can only delete their own orders
+ */
 const deleteOrder = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   const transaction = await sequelize.transaction();
   
   try {
-    // Find the order and ensure it belongs to the authenticated user
+    // Find order and verify ownership
     const order = await Order.findOne({
       where: { 
         id,
@@ -325,15 +340,14 @@ const deleteOrder = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
     
-    // Delete order (cascade will delete order items)
+    // Delete order (associated items deleted via cascade)
     await order.destroy({ transaction });
     
-    // Commit transaction
+    // Commit the deletion
     await transaction.commit();
     
     res.status(200).json({ message: "Order deleted successfully" });
   } catch (error) {
-    // Rollback transaction on error
     await transaction.rollback();
     console.error(`Error deleting order ${id}:`, error);
     res.status(500).json({ error: "Failed to delete order" });

@@ -1,3 +1,4 @@
+// middleware/auth.js
 const jwt = require('jsonwebtoken');
 
 const auth = (req, res, next) => {
@@ -15,7 +16,10 @@ const auth = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-default-secret-key');
     
     // Add user from payload
-    req.user = decoded;
+    req.user = {
+      id: decoded.id
+    };
+    
     next();
   } catch (error) {
     res.status(401).json({ error: 'Token is not valid' });

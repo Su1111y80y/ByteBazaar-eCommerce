@@ -32,6 +32,6 @@ const updateProductSchema = Joi.object({
   categoryId: Joi.number()
     .integer()
     .messages({ "number.base": "Category ID must be a number" }),
-}).or("name", "description", "price", "categoryId"); // At least one field required
+}).or("name", "description", "price", "categoryId");
 
 module.exports = { productSchema, updateProductSchema };

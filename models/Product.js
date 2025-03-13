@@ -19,7 +19,7 @@ const Product = sequelize.define(
       type: DataTypes.FLOAT,
       allowNull: false,
       validate: {
-        min: 0, // Change to plain min: 0
+        min: 0,
       },
     },
     categoryId: {

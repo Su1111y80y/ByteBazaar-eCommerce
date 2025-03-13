@@ -132,9 +132,24 @@
             background-color: var(--secondary);
         }
 
+        .btn-danger {
+            background-color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background-color: #bd2130;
+        }
+
         .btn-small {
             padding: 5px 10px;
             font-size: 14px;
+        }
+
+        .actions-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 10px;
         }
 
         input, select {
@@ -177,6 +192,16 @@
         }
 
         .order-list-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .category-list-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .category-list-item:hover {
             background-color: #f5f5f5;
         }
 
@@ -289,13 +314,47 @@
         .api-url-form {
             margin-bottom: 20px;
         }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .modal {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-title {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>ByteBazaar API Tester</h1>
-            <p>A simple interface to test the API</p>
+            <p>A simple interface to test your eCommerce API functionality</p>
         </header>
 
         <div class="card api-url-form">
@@ -367,6 +426,9 @@
                 <div class="card" id="orderDetails" style="display: none;">
                     <h2>Order Details</h2>
                     <div id="orderDetailsContent"></div>
+                    <div class="actions-row">
+                        <button id="deleteOrderBtn" class="btn btn-danger">Delete Order</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -446,6 +508,18 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmationModal">
+        <div class="modal">
+            <h3 class="modal-title">Confirm Deletion</h3>
+            <p>Are you sure you want to delete this order? This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn" id="cancelDeleteBtn">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <div class="notification" id="notification"></div>
 
     <script>
@@ -454,7 +528,8 @@
             baseUrl: localStorage.getItem('apiBaseUrl') || 'http://localhost:3000',
             token: localStorage.getItem('token') || null,
             user: JSON.parse(localStorage.getItem('user') || 'null'),
-            cart: JSON.parse(localStorage.getItem('cart') || '[]')
+            cart: JSON.parse(localStorage.getItem('cart') || '[]'),
+            currentOrderId: null
         };
 
         // Initialize API base URL input
@@ -560,9 +635,9 @@
                 const categoryUl = categoriesList.querySelector('ul');
                 
                 categories.forEach(category => {
-                    // Add to categories list
+                    // Add to categories list - Changed from order-list-item to category-list-item
                     const li = document.createElement('li');
-                    li.className = 'order-list-item';
+                    li.className = 'category-list-item';
                     li.textContent = category.name;
                     categoryUl.appendChild(li);
                     
@@ -762,10 +837,11 @@
                 ordersHTML += '</div>';
                 ordersList.innerHTML = ordersHTML;
                 
-                // Add event listeners to order items
-                document.querySelectorAll('.order-list-item').forEach(item => {
+                // Add event listeners to order items - FIXED: only attach to orders in ordersList
+                document.querySelectorAll('#ordersList .order-list-item').forEach(item => {
                     item.addEventListener('click', () => {
-                        fetchOrderDetails(item.getAttribute('data-id'));
+                        const orderId = item.getAttribute('data-id');
+                        fetchOrderDetails(orderId);
                     });
                 });
                 
@@ -777,7 +853,7 @@
 
         // Fetch order details
         async function fetchOrderDetails(orderId) {
-            if (!apiState.user) return;
+            if (!apiState.user || !orderId) return;
             
             const orderDetails = document.getElementById('orderDetails');
             const orderDetailsContent = document.getElementById('orderDetailsContent');
@@ -793,6 +869,9 @@
                 });
                 
                 const order = response.data;
+                
+                // Store the current order ID for delete functionality
+                apiState.currentOrderId = order.id;
                 
                 let detailsHTML = `
                     <h3>Order #${order.id}</h3>
@@ -856,6 +935,53 @@
                 orderDetailsContent.innerHTML = `<p>Error loading order details: ${error.message}</p>`;
             }
         }
+        
+        // Delete Order Button Logic
+        document.getElementById('deleteOrderBtn').addEventListener('click', function() {
+            if (!apiState.currentOrderId) {
+                showNotification('No order selected', 'error');
+                return;
+            }
+            
+            // Show confirmation modal
+            document.getElementById('confirmationModal').style.display = 'flex';
+        });
+        
+        // Cancel Delete Button
+        document.getElementById('cancelDeleteBtn').addEventListener('click', function() {
+            document.getElementById('confirmationModal').style.display = 'none';
+        });
+        
+        // Confirm Delete Button
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+            document.getElementById('confirmationModal').style.display = 'none';
+            
+            if (!apiState.currentOrderId) return;
+            
+            try {
+                await axios.delete(`${apiState.baseUrl}/orders/${apiState.currentOrderId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${apiState.token}`
+                    }
+                });
+                
+                // Hide order details
+                document.getElementById('orderDetails').style.display = 'none';
+                
+                // Clear current order ID
+                apiState.currentOrderId = null;
+                
+                // Refresh orders list
+                fetchOrders();
+                
+                // Show success notification
+                showNotification('Order deleted successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error deleting order:', error);
+                showNotification(`Error: ${error.response?.data?.error || error.message}`, 'error');
+            }
+        });
 
         // Login form submission
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
@@ -926,9 +1052,14 @@
             localStorage.removeItem('user');
             apiState.token = null;
             apiState.user = null;
+            apiState.currentOrderId = null;
             
             // Update UI
             updateAuthUI();
+            
+            // Hide order details if visible
+            document.getElementById('orderDetails').style.display = 'none';
+            
             showNotification('Logout successful', 'success');
         });
 

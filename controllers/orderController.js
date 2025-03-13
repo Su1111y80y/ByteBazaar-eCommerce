@@ -1,12 +1,34 @@
 // controllers/orderController.js
-const { User, Product, Order, OrderItem } = require("../models");
+const { Order, User, Product, OrderItem } = require("../models");
 const { createOrderSchema, updateOrderSchema } = require("../schemas/orderSchemas");
 const sequelize = require("../db");
 
-// Get all orders
+// Helper function to calculate total price
+const calculateOrderTotal = async (products) => {
+  let total = 0;
+  
+  for (const item of products) {
+    const product = await Product.findByPk(item.productId);
+    
+    if (!product) {
+      throw new Error(`Product with ID ${item.productId} not found`);
+    }
+    
+    total += product.price * item.quantity;
+  }
+  
+  return parseFloat(total.toFixed(2));
+};
+
+// Get all orders - MODIFIED to only show user's own orders
 const getAllOrders = async (req, res) => {
   try {
+    // Get the authenticated user's ID from the request
+    const userId = req.user.id;
+    
+    // Only fetch orders belonging to this user
     const orders = await Order.findAll({
+      where: { userId },
       include: [
         {
           model: OrderItem,
@@ -26,12 +48,18 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-// Get order by ID
+// Get order by ID - MODIFIED to ensure users can only see their own orders
 const getOrderById = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.id;
   
   try {
-    const order = await Order.findByPk(id, {
+    // Find the order and ensure it belongs to the authenticated user
+    const order = await Order.findOne({
+      where: {
+        id,
+        userId // This ensures the order belongs to the authenticated user
+      },
       include: [
         {
           model: OrderItem,
@@ -69,6 +97,12 @@ const createOrder = async (req, res) => {
     }
     
     const { userId, products } = value;
+    
+    // Security check: Ensure the authenticated user can only create orders for themselves
+    if (userId !== req.user.id) {
+      await transaction.rollback();
+      return res.status(403).json({ error: "You can only create orders for yourself" });
+    }
     
     // Check if user exists
     const user = await User.findByPk(userId);
@@ -153,14 +187,20 @@ const createOrder = async (req, res) => {
   }
 };
 
-// Update an order
+// Update an order - MODIFIED to ensure users can only update their own orders
 const updateOrder = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.id;
   const transaction = await sequelize.transaction();
   
   try {
-    // Find the order
-    const order = await Order.findByPk(id);
+    // Find the order and ensure it belongs to the authenticated user
+    const order = await Order.findOne({
+      where: { 
+        id,
+        userId
+      }
+    });
     
     if (!order) {
       await transaction.rollback();
@@ -175,21 +215,12 @@ const updateOrder = async (req, res) => {
       return res.status(400).json({ error: error.details[0].message });
     }
     
-    const { userId, products, status } = value;
+    const { products, status } = value;
     
-    // Update userId if provided
-    if (userId) {
-      const user = await User.findByPk(userId);
-      if (!user) {
-        await transaction.rollback();
-        return res.status(404).json({ error: "User not found" });
-      }
-      order.userId = userId;
-    }
-    
-    // Update status if provided
-    if (status) {
-      order.status = status;
+    // Security check: If userId is in the request body, ensure it matches the authenticated user
+    if (value.userId && value.userId !== userId) {
+      await transaction.rollback();
+      return res.status(403).json({ error: "You cannot transfer an order to another user" });
     }
     
     // Update products if provided
@@ -240,6 +271,11 @@ const updateOrder = async (req, res) => {
       }
     }
     
+    // Update status if provided
+    if (status) {
+      order.status = status;
+    }
+    
     // Save the order
     await order.save({ transaction });
     
@@ -269,13 +305,20 @@ const updateOrder = async (req, res) => {
   }
 };
 
-// Delete an order
+// Delete an order - MODIFIED to ensure users can only delete their own orders
 const deleteOrder = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.id;
   const transaction = await sequelize.transaction();
   
   try {
-    const order = await Order.findByPk(id);
+    // Find the order and ensure it belongs to the authenticated user
+    const order = await Order.findOne({
+      where: { 
+        id,
+        userId
+      }
+    });
     
     if (!order) {
       await transaction.rollback();

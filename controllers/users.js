@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const userSchema = require('../schemas/userSchemas');
+const jwt = require('jsonwebtoken');
 
 
 // GET: Get user by ID
@@ -118,10 +119,54 @@ const deleteUser = async (req, res) => {
     }
 };
 
+// Login user
+const loginUser = async (req, res) => {
+    try {
+      const { email, password } = req.body;
+  
+      // Find user by email
+      const user = await User.findOne({ where: { email } });
+      
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+  
+      // Check password
+      const isMatch = await user.comparePassword(password);
+      
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+  
+      // Create JWT token
+      const token = jwt.sign(
+        { id: user.id },
+        process.env.JWT_SECRET || 'your-default-secret-key',
+        { expiresIn: '1d' }
+      );
+  
+      // Return user info without password
+      const userWithoutPassword = {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      };
+  
+      res.json({
+        token,
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  };
+
 module.exports = {
     createUser,
     getUserById,
     getAllUsers,
     updateUser,
     deleteUser,
+    loginUser,
 };

@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ByteBazaar API Tester</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <style>
+        :root {
+            --primary: #4a6eb5;
+            --secondary: #6c7ae0;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f7fc;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            margin-bottom: 1rem;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: var(--dark);
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-gap: 20px;
+        }
+
+        .product-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 15px;
+            transition: transform 0.3s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .product-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .product-price {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary);
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .cart-total {
+            font-weight: bold;
+            text-align: right;
+            margin-top: 10px;
+            font-size: 18px;
+        }
+
+        .order-list-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .order-list-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .response-display {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .notification.success {
+            background-color: var(--success);
+        }
+
+        .notification.error {
+            background-color: var(--danger);
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: white;
+        }
+
+        .badge-success {
+            background-color: var(--success);
+        }
+
+        .badge-warning {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+
+        .badge-pending {
+            background-color: var(--secondary);
+        }
+
+        .badge-shipped {
+            background-color: var(--primary);
+        }
+
+        .category-filter {
+            margin-bottom: 20px;
+        }
+
+        #loginForm {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .login-required {
+            text-align: center;
+            padding: 20px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            color: #721c24;
+            margin-bottom: 20px;
+        }
+
+        .highlight {
+            background-color: rgba(255, 217, 0, 0.2);
+            padding: 2px;
+            border-radius: 3px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .api-url-form {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ByteBazaar API Tester</h1>
+            <p>A simple interface to test the API</p>
+        </header>
+
+        <div class="card api-url-form">
+            <h3>API Configuration</h3>
+            <div class="form-group">
+                <label for="apiBaseUrl">API Base URL</label>
+                <input type="text" id="apiBaseUrl" value="http://localhost:3000" placeholder="e.g., http://localhost:3000">
+            </div>
+            <button class="btn" id="saveApiUrl">Save & Connect</button>
+        </div>
+
+        <div class="tab-container">
+            <button class="tab active" data-tab="products">Products</button>
+            <button class="tab" data-tab="categories">Categories</button>
+            <button class="tab" data-tab="cart">Cart</button>
+            <button class="tab" data-tab="orders">Orders</button>
+            <button class="tab" data-tab="account">Account</button>
+            <button class="tab" data-tab="api-tester">API Tester</button>
+        </div>
+
+        <!-- Products Tab -->
+        <div class="tab-content active" id="products-tab">
+            <div class="card category-filter">
+                <h3>Filter by Category</h3>
+                <select id="categorySelect">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div class="products-grid" id="productsGrid">
+                <div class="loading">Loading products...</div>
+            </div>
+        </div>
+
+        <!-- Categories Tab -->
+        <div class="tab-content" id="categories-tab">
+            <div class="card">
+                <h2>Categories</h2>
+                <div id="categoriesList">
+                    <div class="loading">Loading categories...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart Tab -->
+        <div class="tab-content" id="cart-tab">
+            <div class="card">
+                <h2>Shopping Cart</h2>
+                <div id="cartItems">
+                    <p>Your cart is empty.</p>
+                </div>
+                <div class="cart-total">Total: $<span id="cartTotal">0.00</span></div>
+                <button class="btn" id="checkoutBtn" disabled>Checkout</button>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div class="tab-content" id="orders-tab">
+            <div id="ordersLoginRequired" class="login-required">
+                <p>Please log in to view your orders</p>
+                <button class="btn" id="goToLoginBtn">Go to Login</button>
+            </div>
+            <div id="ordersContent" style="display: none;">
+                <div class="card">
+                    <h2>Your Orders</h2>
+                    <div id="ordersList">
+                        <div class="loading">Loading orders...</div>
+                    </div>
+                </div>
+                <div class="card" id="orderDetails" style="display: none;">
+                    <h2>Order Details</h2>
+                    <div id="orderDetailsContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Tab -->
+        <div class="tab-content" id="account-tab">
+            <div id="loginCard" class="card">
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn">Login</button>
+                </form>
+                <p style="margin-top: 20px;">Don't have an account? <a href="#" id="showRegisterForm">Register</a></p>
+            </div>
+
+            <div id="registerCard" class="card" style="display: none;">
+                <h2>Register</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="registerUsername">Username</label>
+                        <input type="text" id="registerUsername" placeholder="Choose a username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" placeholder="Choose a password" required>
+                    </div>
+                    <button type="submit" class="btn">Register</button>
+                </form>
+                <p style="margin-top: 20px;">Already have an account? <a href="#" id="showLoginForm">Login</a></p>
+            </div>
+
+            <div id="accountInfo" class="card" style="display: none;">
+                <h2>Account Information</h2>
+                <div id="userDetails"></div>
+                <button class="btn" id="logoutBtn" style="margin-top: 20px;">Logout</button>
+            </div>
+        </div>
+
+        <!-- API Tester Tab -->
+        <div class="tab-content" id="api-tester-tab">
+            <div class="card">
+                <h2>API Request Tester</h2>
+                <div class="form-group">
+                    <label for="requestMethod">Method</label>
+                    <select id="requestMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="requestEndpoint">Endpoint</label>
+                    <input type="text" id="requestEndpoint" placeholder="e.g., /products">
+                </div>
+                <div class="form-group">
+                    <label for="requestBody">Request Body (JSON)</label>
+                    <textarea id="requestBody" rows="5" placeholder='{"key": "value"}' style="width: 100%; padding: 8px;"></textarea>
+                </div>
+                <button class="btn" id="sendRequestBtn">Send Request</button>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Response</label>
+                    <div class="response-display" id="responseDisplay">No response yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Variables to store app state
+        const apiState = {
+            baseUrl: localStorage.getItem('apiBaseUrl') || 'http://localhost:3000',
+            token: localStorage.getItem('token') || null,
+            user: JSON.parse(localStorage.getItem('user') || 'null'),
+            cart: JSON.parse(localStorage.getItem('cart') || '[]')
+        };
+
+        // Initialize API base URL input
+        document.getElementById('apiBaseUrl').value = apiState.baseUrl;
+
+        // Save API URL
+        document.getElementById('saveApiUrl').addEventListener('click', function() {
+            const newUrl = document.getElementById('apiBaseUrl').value.trim();
+            if (newUrl) {
+                apiState.baseUrl = newUrl;
+                localStorage.setItem('apiBaseUrl', newUrl);
+                showNotification('API URL updated. Reconnecting...', 'success');
+                
+                // Reload initial data
+                fetchCategories();
+                fetchProducts();
+                updateAuthUI();
+            }
+        });
+
+        // Tab navigation
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and tab contents
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                const tabName = tab.getAttribute('data-tab');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+                
+                // Special handling for certain tabs
+                if (tabName === 'orders' && apiState.user) {
+                    fetchOrders();
+                }
+            });
+        });
+
+        // Fetch products
+        async function fetchProducts(categoryId = '') {
+            const productsGrid = document.getElementById('productsGrid');
+            productsGrid.innerHTML = '<div class="loading">Loading products...</div>';
+            
+            try {
+                const endpoint = categoryId 
+                    ? `${apiState.baseUrl}/products?categoryId=${categoryId}`
+                    : `${apiState.baseUrl}/products`;
+                
+                const response = await axios.get(endpoint);
+                const products = response.data;
+                
+                if (products.length === 0) {
+                    productsGrid.innerHTML = '<p>No products found.</p>';
+                    return;
+                }
+                
+                productsGrid.innerHTML = '';
+                products.forEach(product => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'product-card';
+                    productCard.innerHTML = `
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-description">${product.description}</div>
+                        <div class="product-price">$${product.price.toFixed(2)}</div>
+                        <button class="btn btn-small add-to-cart" data-id="${product.id}" 
+                                data-name="${product.name}" data-price="${product.price}">
+                            Add to Cart
+                        </button>
+                    `;
+                    productsGrid.appendChild(productCard);
+                });
+                
+                // Add event listeners to Add to Cart buttons
+                document.querySelectorAll('.add-to-cart').forEach(button => {
+                    button.addEventListener('click', addToCart);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                productsGrid.innerHTML = `<p>Error loading products: ${error.message}</p>`;
+            }
+        }
+
+        // Fetch categories
+        async function fetchCategories() {
+            const categoriesList = document.getElementById('categoriesList');
+            const categorySelect = document.getElementById('categorySelect');
+            
+            try {
+                const response = await axios.get(`${apiState.baseUrl}/categories`);
+                const categories = response.data;
+                
+                // Clear previous options except "All Categories"
+                categorySelect.innerHTML = '<option value="">All Categories</option>';
+                
+                if (categories.length === 0) {
+                    categoriesList.innerHTML = '<p>No categories found.</p>';
+                    return;
+                }
+                
+                categoriesList.innerHTML = '<ul style="list-style-type: none; padding: 0;"></ul>';
+                const categoryUl = categoriesList.querySelector('ul');
+                
+                categories.forEach(category => {
+                    // Add to categories list
+                    const li = document.createElement('li');
+                    li.className = 'order-list-item';
+                    li.textContent = category.name;
+                    categoryUl.appendChild(li);
+                    
+                    // Add to category select dropdown
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    categorySelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+                categoriesList.innerHTML = `<p>Error loading categories: ${error.message}</p>`;
+                categorySelect.innerHTML = '<option value="">All Categories</option>';
+            }
+        }
+
+        // Category filter change event
+        document.getElementById('categorySelect').addEventListener('change', function() {
+            fetchProducts(this.value);
+        });
+
+        // Add to cart function
+        function addToCart(event) {
+            const button = event.target;
+            const id = parseInt(button.getAttribute('data-id'));
+            const name = button.getAttribute('data-name');
+            const price = parseFloat(button.getAttribute('data-price'));
+            
+            // Check if product is already in cart
+            const existingItem = apiState.cart.find(item => item.id === id);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                apiState.cart.push({
+                    id,
+                    name,
+                    price,
+                    quantity: 1
+                });
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('cart', JSON.stringify(apiState.cart));
+            
+            // Update cart UI
+            updateCartUI();
+            
+            // Show notification
+            showNotification(`Added ${name} to cart`, 'success');
+        }
+
+        // Update cart UI
+        function updateCartUI() {
+            const cartItems = document.getElementById('cartItems');
+            const cartTotal = document.getElementById('cartTotal');
+            const checkoutBtn = document.getElementById('checkoutBtn');
+            
+            if (apiState.cart.length === 0) {
+                cartItems.innerHTML = '<p>Your cart is empty.</p>';
+                cartTotal.textContent = '0.00';
+                checkoutBtn.disabled = true;
+                return;
+            }
+            
+            let total = 0;
+            let cartHTML = '<div>';
+            
+            apiState.cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                
+                cartHTML += `
+                    <div class="cart-item">
+                        <div>
+                            <div><strong>${item.name}</strong></div>
+                            <div>$${item.price.toFixed(2)} x ${item.quantity}</div>
+                        </div>
+                        <div>
+                            $${itemTotal.toFixed(2)}
+                            <button class="btn btn-small remove-from-cart" data-id="${item.id}">Remove</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            cartHTML += '</div>';
+            cartItems.innerHTML = cartHTML;
+            cartTotal.textContent = total.toFixed(2);
+            checkoutBtn.disabled = !apiState.user;
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-from-cart').forEach(button => {
+                button.addEventListener('click', removeFromCart);
+            });
+        }
+
+        // Remove from cart function
+        function removeFromCart(event) {
+            const id = parseInt(event.target.getAttribute('data-id'));
+            apiState.cart = apiState.cart.filter(item => item.id !== id);
+            
+            // Save to localStorage
+            localStorage.setItem('cart', JSON.stringify(apiState.cart));
+            
+            // Update cart UI
+            updateCartUI();
+            
+            // Show notification
+            showNotification('Item removed from cart', 'success');
+        }
+
+        // Checkout function
+        document.getElementById('checkoutBtn').addEventListener('click', async function() {
+            if (!apiState.user) {
+                showNotification('Please login to checkout', 'error');
+                return;
+            }
+            
+            if (apiState.cart.length === 0) {
+                showNotification('Your cart is empty', 'error');
+                return;
+            }
+            
+            try {
+                // Format products for the API
+                const orderProducts = apiState.cart.map(item => ({
+                    productId: item.id,
+                    quantity: item.quantity
+                }));
+                
+                // Create order
+                const response = await axios.post(`${apiState.baseUrl}/orders`, {
+                    userId: apiState.user.id,
+                    products: orderProducts
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${apiState.token}`
+                    }
+                });
+                
+                // Clear cart
+                apiState.cart = [];
+                localStorage.setItem('cart', JSON.stringify(apiState.cart));
+                updateCartUI();
+                
+                // Show notification
+                showNotification('Order placed successfully!', 'success');
+                
+                // Switch to orders tab and refresh orders
+                document.querySelector('[data-tab="orders"]').click();
+                
+            } catch (error) {
+                console.error('Error creating order:', error);
+                showNotification(`Error: ${error.response?.data?.error || error.message}`, 'error');
+            }
+        });
+
+        // Fetch orders
+        async function fetchOrders() {
+            if (!apiState.user) return;
+            
+            const ordersList = document.getElementById('ordersList');
+            ordersList.innerHTML = '<div class="loading">Loading orders...</div>';
+            
+            try {
+                const response = await axios.get(`${apiState.baseUrl}/orders`, {
+                    headers: {
+                        'Authorization': `Bearer ${apiState.token}`
+                    }
+                });
+                
+                const orders = response.data;
+                
+                if (orders.length === 0) {
+                    ordersList.innerHTML = '<p>No orders found.</p>';
+                    return;
+                }
+                
+                let ordersHTML = '<div>';
+                
+                orders.forEach(order => {
+                    ordersHTML += `
+                        <div class="order-list-item" data-id="${order.id}">
+                            <div>Order #${order.id}</div>
+                            <div>Total: $${order.total.toFixed(2)}</div>
+                            <div>
+                                Status: 
+                                <span class="badge badge-${order.status}">${order.status}</span>
+                            </div>
+                            <div>Date: ${new Date(order.createdAt).toLocaleDateString()}</div>
+                        </div>
+                    `;
+                });
+                
+                ordersHTML += '</div>';
+                ordersList.innerHTML = ordersHTML;
+                
+                // Add event listeners to order items
+                document.querySelectorAll('.order-list-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        fetchOrderDetails(item.getAttribute('data-id'));
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Error fetching orders:', error);
+                ordersList.innerHTML = `<p>Error loading orders: ${error.message}</p>`;
+            }
+        }
+
+        // Fetch order details
+        async function fetchOrderDetails(orderId) {
+            if (!apiState.user) return;
+            
+            const orderDetails = document.getElementById('orderDetails');
+            const orderDetailsContent = document.getElementById('orderDetailsContent');
+            
+            orderDetails.style.display = 'block';
+            orderDetailsContent.innerHTML = '<div class="loading">Loading order details...</div>';
+            
+            try {
+                const response = await axios.get(`${apiState.baseUrl}/orders/${orderId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${apiState.token}`
+                    }
+                });
+                
+                const order = response.data;
+                
+                let detailsHTML = `
+                    <h3>Order #${order.id}</h3>
+                    <p>Date: ${new Date(order.createdAt).toLocaleString()}</p>
+                    <p>Status: <span class="badge badge-${order.status}">${order.status}</span></p>
+                    <h4>Items:</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                // Handle both direct products array and OrderItems relationship
+                if (order.OrderItems && order.OrderItems.length > 0) {
+                    // Using normalized approach with OrderItems
+                    order.OrderItems.forEach(item => {
+                        const product = item.Product;
+                        const subtotal = item.priceAtPurchase * item.quantity;
+                        
+                        detailsHTML += `
+                            <tr>
+                                <td>${product.name}</td>
+                                <td>$${item.priceAtPurchase.toFixed(2)}</td>
+                                <td>${item.quantity}</td>
+                                <td>$${subtotal.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                } else if (order.products && order.products.length > 0) {
+                    // Using JSONB products array approach
+                    order.products.forEach(item => {
+                        const subtotal = item.price * item.quantity;
+                        
+                        detailsHTML += `
+                            <tr>
+                                <td>${item.productId}</td>
+                                <td>$${item.price ? item.price.toFixed(2) : 'N/A'}</td>
+                                <td>${item.quantity}</td>
+                                <td>$${subtotal ? subtotal.toFixed(2) : 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                detailsHTML += `
+                        </tbody>
+                    </table>
+                    <div class="cart-total">Total: $${order.total.toFixed(2)}</div>
+                `;
+                
+                orderDetailsContent.innerHTML = detailsHTML;
+                
+            } catch (error) {
+                console.error('Error fetching order details:', error);
+                orderDetailsContent.innerHTML = `<p>Error loading order details: ${error.message}</p>`;
+            }
+        }
+
+        // Login form submission
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await axios.post(`${apiState.baseUrl}/api/users/login`, {
+                    email,
+                    password
+                });
+                
+                const { token, user } = response.data;
+                
+                // Save to localStorage and app state
+                localStorage.setItem('token', token);
+                localStorage.setItem('user', JSON.stringify(user));
+                apiState.token = token;
+                apiState.user = user;
+                
+                // Update UI
+                updateAuthUI();
+                showNotification('Login successful', 'success');
+                
+                // Refresh orders if on orders tab
+                if (document.querySelector('[data-tab="orders"]').classList.contains('active')) {
+                    fetchOrders();
+                }
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification(`Login failed: ${error.response?.data?.error || error.message}`, 'error');
+            }
+        });
+
+        // Register form submission
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            try {
+                await axios.post(`${apiState.baseUrl}/api/users`, {
+                    username,
+                    email,
+                    password
+                });
+                
+                showNotification('Registration successful. Please login.', 'success');
+                
+                // Switch to login form
+                document.getElementById('showLoginForm').click();
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showNotification(`Registration failed: ${error.response?.data?.error || error.message}`, 'error');
+            }
+        });
+
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            // Clear localStorage and app state
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            apiState.token = null;
+            apiState.user = null;
+            
+            // Update UI
+            updateAuthUI();
+            showNotification('Logout successful', 'success');
+        });
+
+        // Toggle between login and register forms
+        document.getElementById('showRegisterForm').addEventListener('click', function(event) {
+            event.preventDefault();
+            document.getElementById('loginCard').style.display = 'none';
+            document.getElementById('registerCard').style.display = 'block';
+        });
+
+        document.getElementById('showLoginForm').addEventListener('click', function(event) {
+            event.preventDefault();
+            document.getElementById('registerCard').style.display = 'none';
+            document.getElementById('loginCard').style.display = 'block';
+        });
+
+        // Go to login button
+        document.getElementById('goToLoginBtn').addEventListener('click', function() {
+            document.querySelector('[data-tab="account"]').click();
+        });
+
+        // Update auth UI based on login state
+        function updateAuthUI() {
+            const loginCard = document.getElementById('loginCard');
+            const accountInfo = document.getElementById('accountInfo');
+            const userDetails = document.getElementById('userDetails');
+            const ordersLoginRequired = document.getElementById('ordersLoginRequired');
+            const ordersContent = document.getElementById('ordersContent');
+            const checkoutBtn = document.getElementById('checkoutBtn');
+            
+            if (apiState.user) {
+                // User is logged in
+                loginCard.style.display = 'none';
+                accountInfo.style.display = 'block';
+                ordersLoginRequired.style.display = 'none';
+                ordersContent.style.display = 'block';
+                checkoutBtn.disabled = apiState.cart.length === 0;
+                
+                // Display user details
+                userDetails.innerHTML = `
+                    <p><strong>Username:</strong> ${apiState.user.username}</p>
+                    <p><strong>Email:</strong> ${apiState.user.email}</p>
+                `;
+                
+            } else {
+                // User is not logged in
+                loginCard.style.display = 'block';
+                accountInfo.style.display = 'none';
+                ordersLoginRequired.style.display = 'block';
+                ordersContent.style.display = 'none';
+                checkoutBtn.disabled = true;
+            }
+        }
+
+        // API Request Tester
+        document.getElementById('sendRequestBtn').addEventListener('click', async function() {
+            const method = document.getElementById('requestMethod').value;
+            const endpoint = document.getElementById('requestEndpoint').value.trim();
+            const bodyText = document.getElementById('requestBody').value.trim();
+            const responseDisplay = document.getElementById('responseDisplay');
+            
+            if (!endpoint) {
+                showNotification('Please enter an endpoint', 'error');
+                return;
+            }
+            
+            // Prepare request config
+            const config = {
+                method,
+                url: `${apiState.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            // Add auth token if available
+            if (apiState.token) {
+                config.headers['Authorization'] = `Bearer ${apiState.token}`;
+            }
+            
+            // Add request body for POST and PUT
+            if ((method === 'POST' || method === 'PUT') && bodyText) {
+                try {
+                    config.data = JSON.parse(bodyText);
+                } catch (e) {
+                    showNotification('Invalid JSON in request body', 'error');
+                    return;
+                }
+            }
+            
+            // Send request
+            responseDisplay.textContent = 'Sending request...';
+            
+            try {
+                const response = await axios(config);
+                responseDisplay.textContent = JSON.stringify(response.data, null, 2);
+                showNotification('Request sent successfully', 'success');
+            } catch (error) {
+                console.error('API request error:', error);
+                responseDisplay.textContent = `ERROR: ${error.message}\n\n${JSON.stringify(error.response?.data || {}, null, 2)}`;
+                showNotification('Request failed', 'error');
+            }
+        });
+
+        // Notification function
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize the app
+        function init() {
+            updateAuthUI();
+            updateCartUI();
+            fetchCategories();
+            fetchProducts();
+        }
+        
+        // Run initialization
+        init();
+    </script>
+</body>
+</html>
